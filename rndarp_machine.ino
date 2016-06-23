@@ -4,9 +4,14 @@ const int battute = 8;
 int sensorMin = 0;
 int sensorMax = 500;
 int tempo = 120;
-int velocities[] = {127,127,127,127,127,127,127,127};
+int vels[] = {127,127,127,127,127,127,127,127};
 int seeds[8];
-int tones[] = {127,127,127,127,127,127,127,127};
+int tones[] = {60,60,60,60,60,60,60,60};
+int currentNotes[8];
+int ch=1;
+int *ptones;
+boolean PLAY = false;
+
 
 String currentMode = "TEMPO";
 
@@ -48,8 +53,9 @@ void scala(int initNote,int modo[], int range)
   
 }
 
+/*
 //Restituisce una rray di battute Randomizza gli array nelle battute (8)
-void randomize(int generator[])
+void randomize(int generator[],int  *pdata )
 {
   int ret[8];
   int i;
@@ -58,18 +64,25 @@ void randomize(int generator[])
     ret[i] = generator[rnd];
   }
 }
-
+*/
 
 void setup() {
-  battute = 8;
-  currentMode = pentatonic
-  range = 1
-  scala = scala(60,currentMode,range);
-  
+  //currentMode = pentatonic
+  //range = 1
+  //scala = scala(60,currentMode,range);
+  PLAY=true;
   // set up the LCD's number of columns and rows:
   //lcd.begin(16, 2);
   // Print a message to the LCD.
   //lcd.print("RNDARP MACHINE");
+}
+
+///play the rnd arp
+void play(){
+  for (int i=0;i<8;i=i+1){
+    String space = " ";
+    Serial.println(tones[0] + space + vels[i] + space + ch);
+  }
 }
 
 void loop() {
@@ -100,11 +113,16 @@ void loop() {
     case 6: //OCTAVE
       Serial.println("Range octave");
       break;
+    
+    if (PLAY==true){
+      play(); 
+    }
+     
   }
   
   // set the cursor to column 0, line 1
   // (note: line 1 is the second row, since counting begins with 0):
-  lcd.setCursor(0, 1);
+  //lcd.setCursor(0, 1);
   // print the number of seconds since reset:
-  lcd.print(millis() / 1000);
+  //lcd.print(millis() / 1000);
 }
