@@ -2,7 +2,7 @@
 const int battute = 8;
 
 int sensorMin = 0;
-int sensorMax = 500;
+int sensorMax = 1024;
 int tempo = 120;
 int vels[] = {127,127,127,127,127,127,127,127};
 int seeds[8];
@@ -12,6 +12,7 @@ int ch=1;
 int *ptones;
 boolean PLAY = false;
 
+int currentMenu = 0;
 
 String currentMode = "TEMPO";
 
@@ -75,6 +76,7 @@ void setup() {
   //lcd.begin(16, 2);
   // Print a message to the LCD.
   //lcd.print("RNDARP MACHINE");
+  Serial.begin(9600);
 }
 
 ///play the rnd arp
@@ -85,40 +87,74 @@ void play(){
   }
 }
 
+String menuLabel = "";
+int lastMenu = 0;
+
+float bps = tempo/60;
+float tickDuration = 1/bps;
+int del_tick = tickDuration*1000;
+
+int arp_tick = del_tick / (battute/4);
+
+int menuReading;
+int changeReading;
 void loop() {
+ 
+
   
-  int menuReading = analogRead(A0);
   // map the sensor range to a range of four options:
-  int range = map(menuReading, sensorMin, sensorMax, 0, 3);
-  
+  int range = map(menuReading, sensorMin, sensorMax, 0, 6);
+  currentMenu=range;
   switch (range) {
     case 0:    // TEMPO
-      Serial.println("");
+      menuLabel = "TEMPO";
+      //int tempoReading = changeReading;    
+      tempo = map(changeReading, sensorMin, sensorMax, 70, 230); 
+      //Serial.print(tempo);
+      bps = tempo/60;
+      tickDuration = 1/bps;
+      del_tick = tickDuration*1000;
+      //se 8 del_tick = 4 battute; 8/4=2
+      arp_tick = del_tick / (battute/4);
       break;
     case 1:    // VELOCITY
-      Serial.println("dim");
+      menuLabel = "VELOCITY";
       break;
     case 2:    // SEEDS
-      Serial.println("seeds");
+      menuLabel = "SEEDS";
+      for(int i=0;i<battute;i++){
+        tones[i] = random(255);
+      }
       break;
     case 3:    // TONE
-      Serial.println("tone");
+      menuLabel = "TONE";
       break;
     case 4:    // SCALE
-      Serial.println("scale");
+      menuLabel = "SCALE";
       break;  
     case 5: //RANGE
-      Serial.println("Range");
+      menuLabel = "RANGE";
       break;
     case 6: //OCTAVE
-      Serial.println("Range octave");
+      menuLabel = "OCTAVE";
       break;
-    
-    if (PLAY==true){
-      play(); 
-    }
-     
   }
+  
+  if (lastMenu != currentMenu){
+    Serial.println(menuLabel);
+    lastMenu = currentMenu;
+  }
+  
+  Serial.println(tempo);
+  //Serial.println(del_tick);
+  for (int b=0;b<battute;b++){
+    menuReading = analogRead(A0);
+    changeReading = analogRead(A1);
+    Serial.print(String(tones[b],HEX)+"|" );
+    delay(arp_tick);
+  }
+  Serial.println();
+
   
   // set the cursor to column 0, line 1
   // (note: line 1 is the second row, since counting begins with 0):
