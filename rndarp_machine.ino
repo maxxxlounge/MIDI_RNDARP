@@ -1,16 +1,23 @@
 
-const int battute = 8;
+/**
+  DEFINISCO LE COSTANTI PER LE LETTURE DEGLI INPUT
+*/
+const int PIN_SEED = -1;     
+const int PIN_TEMPO_INC = -1;     
+const int PIN_TEMPO_DEC = -1;
 
+//FUNZIONI DI MENU
 int sensorMin = 0;
 int sensorMax = 1024;
+
+int battute = 8;
 int tempo = 120;
 int vels[] = {127,127,127,127,127,127,127,127};
-int seeds[8];
 int tones[] = {60,60,60,60,60,60,60,60};
 int currentNotes[8];
-int ch=1;
+int midi_ch=1;
 int *ptones;
-boolean PLAY = false;
+boolean play = false;
 
 int currentMenu = 0;
 
@@ -28,6 +35,12 @@ int pentatonic[] = {1,2,3,2,2,3,1};
 
 
 int ret[8];
+
+float bps = tempo/60;
+float tickDuration = 1/bps;
+int del_tick = tickDuration*1000;
+int arp_tick = del_tick / (battute/4);
+
 
 void scala(int initNote,int modo[], int range)
 {
@@ -71,7 +84,7 @@ void setup() {
   //currentMode = pentatonic
   //range = 1
   //scala = scala(60,currentMode,range);
-  PLAY=true;
+  play=true;
   // set up the LCD's number of columns and rows:
   //lcd.begin(16, 2);
   // Print a message to the LCD.
@@ -90,22 +103,29 @@ void play(){
 String menuLabel = "";
 int lastMenu = 0;
 
-float bps = tempo/60;
-float tickDuration = 1/bps;
-int del_tick = tickDuration*1000;
-
-int arp_tick = del_tick / (battute/4);
 
 int menuReading;
 int changeReading;
-void loop() {
- 
 
+void inputReading(){
+    menuReading = analogRead(A0);
+    changeReading = analogRead(A1);
+    seed = digitalRead(PIN_SEED);
+}
+
+void seed(){
+  menuLabel = "SEEDS";
+  for(int i=0;i<battute;i++){
+    tones[i] = random(255);
+  }
+}
+
+void loop() {
   
   // map the sensor range to a range of four options:
   int range = map(menuReading, sensorMin, sensorMax, 0, 6);
   currentMenu=range;
-  switch (range) {
+  switch (currentMenu) {
     case 0:    // TEMPO
       menuLabel = "TEMPO";
       //int tempoReading = changeReading;    
@@ -120,22 +140,16 @@ void loop() {
     case 1:    // VELOCITY
       menuLabel = "VELOCITY";
       break;
-    case 2:    // SEEDS
-      menuLabel = "SEEDS";
-      for(int i=0;i<battute;i++){
-        tones[i] = random(255);
-      }
-      break;
-    case 3:    // TONE
+    case 2:    // TONE
       menuLabel = "TONE";
       break;
-    case 4:    // SCALE
+    case 3:    // SCALE
       menuLabel = "SCALE";
       break;  
-    case 5: //RANGE
+    case 4: //RANGE
       menuLabel = "RANGE";
       break;
-    case 6: //OCTAVE
+    case 5: //OCTAVE
       menuLabel = "OCTAVE";
       break;
   }
@@ -147,14 +161,14 @@ void loop() {
   
   Serial.println(tempo);
   //Serial.println(del_tick);
+  if (play==true){
   for (int b=0;b<battute;b++){
-    menuReading = analogRead(A0);
-    changeReading = analogRead(A1);
+    inputReading();
     Serial.print(String(tones[b],HEX)+"|" );
     delay(arp_tick);
   }
   Serial.println();
-
+  }
   
   // set the cursor to column 0, line 1
   // (note: line 1 is the second row, since counting begins with 0):
