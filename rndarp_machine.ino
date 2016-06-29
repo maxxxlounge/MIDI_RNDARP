@@ -9,10 +9,12 @@ const int PIN_TEMPO_DEC = -1;
 //FUNZIONI DI MENU
 int sensorMin = 0;
 int sensorMax = 1024;
-
 int battute = 8;
+int range = 1;
+int octave = 5;
+int tonalita = 1; //1=C, 2=C#, 12=B etc...
 int tempo = 120;
-int vels[] = {127,127,127,127,127,127,127,127};
+int velocity[] = {127,127,127,127,127,127,127,127};
 int tones[] = {60,60,60,60,60,60,60,60};
 int rndArray[8];
 int currentNotes[8];
@@ -42,6 +44,18 @@ float tickDuration = 1/bps;
 int del_tick = tickDuration*1000;
 int arp_tick = del_tick / (battute/4);
 
+int menuReading;
+int changeReading;
+
+boolean seed_btn;
+boolean tempo_inc;
+boolean tempo_dec;   
+
+void noteOn(int cmd, int pitch, int velocity) {
+  Serial.write(cmd);
+  Serial.write(pitch);
+  Serial.write(velocity);
+}
 
 void scala(int initNote,int modo[], int range)
 {
@@ -83,28 +97,33 @@ void setup() {
   //lcd.begin(16, 2);
   // Print a message to the LCD.
   //lcd.print("RNDARP MACHINE");
-  Serial.begin(9600);
+  //Serial.begin(9600);
+  Serial.begin(31250);
 }
 
 ///play the rnd arp
 void playSound(){
   for (int i=0;i<8;i=i+1){
     String space = " ";
-    Serial.println(tones[0] + space + vels[i] + space + midi_ch);
+    Serial.println(tones[0] + space + velocity[i] + space + midi_ch);
   }
 }
 
 String menuLabel = "";
 int lastMenu = 0;
 
-
-int menuReading;
-int changeReading;
+void updateTempo(){
+  bps = tempo/60;
+  tickDuration = 1/bps;
+  del_tick = tickDuration*1000;
+  //se 8 del_tick = 4 battute; 8/4=2
+  arp_tick = del_tick / (battute/4);
+} 
 
 void inputReading(){
     menuReading = analogRead(A0);
     changeReading = analogRead(A1);
-    seed = digitalRead(PIN_SEED);
+    seed_btn = digitalRead(PIN_SEED);
     tempo_inc = digitalRead(PIN_TEMPO_INC);
     tempo_dec = digitalRead(PIN_TEMPO_DEC);    
     if (tempo_inc){
@@ -113,15 +132,17 @@ void inputReading(){
     if (tempo_dec){
       tempo -= 1;
     }
-    if (tempo_dev || tempo_inc){
+    if (tempo_dec || tempo_inc){
       updateTempo();
     }
 }
 
 void seed(){
-  menuLabel = "SEEDS";
   for(int i=0;i<battute;i++){
-    tones[i] = random(255);
+    //60 = 5 * 12
+    int minNote = tonalita + (12*octave);
+    int maxNote = tonalita + (12*(octave+range));
+    tones[i] = random(minNote,maxNote);
   }
 }
 
@@ -142,9 +163,11 @@ void loop() {
       break;  
     case 3: //RANGE
       menuLabel = "RANGE";
+      range = map(changeReading, sensorMin, sensorMax, 1, 4);
       break;
     case 4: //OCTAVE
       menuLabel = "OCTAVE";
+      octave = map(changeReading, sensorMin, sensorMax, 1, 8);
       break;
   }
   
@@ -152,22 +175,16 @@ void loop() {
     Serial.println(menuLabel);
     lastMenu = currentMenu;
   }
-
-  void updateTempo(){
-    bps = tempo/60;
-    tickDuration = 1/bps;
-    del_tick = tickDuration*1000;
-    //se 8 del_tick = 4 battute; 8/4=2
-    arp_tick = del_tick / (battute/4);
-  } 
   
   Serial.println(tempo);
   //Serial.println(del_tick);
   if (play==true){
   for (int b=0;b<battute;b++){
     inputReading();
+    noteOn(0x90, tones[b], velocity[b]);
     Serial.print(String(tones[b],HEX)+"|" );
     delay(arp_tick);
+    noteOn(tones[b], note, 0x00);
   }
   Serial.println();
   }
