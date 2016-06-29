@@ -14,6 +14,7 @@ int battute = 8;
 int tempo = 120;
 int vels[] = {127,127,127,127,127,127,127,127};
 int tones[] = {60,60,60,60,60,60,60,60};
+int rndArray[8];
 int currentNotes[8];
 int midi_ch=1;
 int *ptones;
@@ -45,40 +46,33 @@ int arp_tick = del_tick / (battute/4);
 void scala(int initNote,int modo[], int range)
 {
   int modoRange[]={};
-  //octave 3
-  //initNote = C
-  //60
-  //modo maggiore [2,2,1,2,2,2,1]
-  //int modoRange[4];
-  //modoRange = modo;
-  //for (r=1;r<sizeOf(range);r++){
-  //  for (n=0;n<sizeOf(modo);n++){
-  //    modoRange[r*7+n] = modo[n];
-  //  }
-
+  /*
+    //octave 3
+    //initNote = C
+    //60
+    //modo maggiore [2,2,1,2,2,2,1]
+    //int modoRange[4];
+    //modoRange = modo;
+    //for (r=1;r<sizeOf(range);r++){
+    //  for (n=0;n<sizeOf(modo);n++){
+    //    modoRange[r*7+n] = modo[n];
+    //  }
+  */
 
   ret[0] = initNote;
-  
   int i;
   for (i = 0; i < 8; i=i+1){
      ret[i+1] = initNote+modoRange[i];
-  }
-  
-  
+  } 
 }
 
-/*
 //Restituisce una rray di battute Randomizza gli array nelle battute (8)
-void randomize(int generator[],int  *pdata )
-{
-  int ret[8];
-  int i;
-  for(i=0;i<battute;i++){
-    int rnd = random(sizeOf(generator));
-    ret[i] = generator[rnd];
+void randomize(int rnd_min, int rnd_max){
+  for(int i=0;i<battute;i++){
+    int rnd = random(rnd_max-rnd_min);
+    rndArray[i] = rnd + rnd_min;
   }
 }
-*/
 
 void setup() {
   //currentMode = pentatonic
@@ -93,10 +87,10 @@ void setup() {
 }
 
 ///play the rnd arp
-void play(){
+void playSound(){
   for (int i=0;i<8;i=i+1){
     String space = " ";
-    Serial.println(tones[0] + space + vels[i] + space + ch);
+    Serial.println(tones[0] + space + vels[i] + space + midi_ch);
   }
 }
 
@@ -111,6 +105,17 @@ void inputReading(){
     menuReading = analogRead(A0);
     changeReading = analogRead(A1);
     seed = digitalRead(PIN_SEED);
+    tempo_inc = digitalRead(PIN_TEMPO_INC);
+    tempo_dec = digitalRead(PIN_TEMPO_DEC);    
+    if (tempo_inc){
+      tempo += 1;
+    }
+    if (tempo_dec){
+      tempo -= 1;
+    }
+    if (tempo_dev || tempo_inc){
+      updateTempo();
+    }
 }
 
 void seed(){
@@ -126,30 +131,19 @@ void loop() {
   int range = map(menuReading, sensorMin, sensorMax, 0, 6);
   currentMenu=range;
   switch (currentMenu) {
-    case 0:    // TEMPO
-      menuLabel = "TEMPO";
-      //int tempoReading = changeReading;    
-      tempo = map(changeReading, sensorMin, sensorMax, 70, 230); 
-      //Serial.print(tempo);
-      bps = tempo/60;
-      tickDuration = 1/bps;
-      del_tick = tickDuration*1000;
-      //se 8 del_tick = 4 battute; 8/4=2
-      arp_tick = del_tick / (battute/4);
-      break;
-    case 1:    // VELOCITY
+    case 0:    // VELOCITY
       menuLabel = "VELOCITY";
       break;
-    case 2:    // TONE
+    case 1:    // TONE
       menuLabel = "TONE";
       break;
-    case 3:    // SCALE
+    case 2:    // SCALE
       menuLabel = "SCALE";
       break;  
-    case 4: //RANGE
+    case 3: //RANGE
       menuLabel = "RANGE";
       break;
-    case 5: //OCTAVE
+    case 4: //OCTAVE
       menuLabel = "OCTAVE";
       break;
   }
@@ -158,6 +152,14 @@ void loop() {
     Serial.println(menuLabel);
     lastMenu = currentMenu;
   }
+
+  void updateTempo(){
+    bps = tempo/60;
+    tickDuration = 1/bps;
+    del_tick = tickDuration*1000;
+    //se 8 del_tick = 4 battute; 8/4=2
+    arp_tick = del_tick / (battute/4);
+  } 
   
   Serial.println(tempo);
   //Serial.println(del_tick);
