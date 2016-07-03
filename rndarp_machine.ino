@@ -9,6 +9,8 @@ const int PIN_MODE = 10;
 const int PIN_INC = 9;     
 const int PIN_DEC = 8;
 
+// VALORI PERCENTUALI
+int velocity_rate = 80;
 
 //FUNZIONI DI MENU
 int sensorMin = 0;
@@ -16,24 +18,26 @@ int sensorMax = 1024;
 int battute = 8;
 int range = 1;
 int octave = 5;
-int tonalita = 1; //1=C, 2=C#, 12=B etc...
+int note = 0; //1=C, 2=C#, 12=B etc...
+String note_str[] = {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
+
+int rnd_notes[] = {60,60,60,60,60,60,60,60};
+
 int tempo = 120;
 int tones[] = {60,60,60,60,60,60,60,60};
 int midi_ch=1;
 
 int currentMenu = 0;
-
-int maggiore[] = {3,5,6,8,10,12,13};
-int minore[] = {3,4,6,8,9,11,13};
-/*
+int scale = 0;
+String scale_str[]={"random","maggiore","minore","dorico","frigio","lidio","misolidio","locrio","pentatonic"};
+int maggiore[] = {2,2,1,2,2,2,1};
+int minore[] = {2,1,2,2,2,1,2};
 int dorico[] = {2,1,2,2,2,1,2};
 int frigio[] = {1,2,2,2,1,2,2};
 int lidio[] = {2,2,2,1,2,2,1};
 int misolidio[] = {2,2,1,2,2,1,2};
-
 int locrio[] = {1,2,2,1,2,2,2};
 int pentatonic[] = {1,2,3,2,2,3,1};
-*/
 
 float bps = tempo/60;
 float tickDuration = 1/bps;
@@ -49,7 +53,86 @@ boolean tempo_inc;
 boolean tempo_dec;   
 String menuLabel;
 
- LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+
+String noteToString(int note_local){
+  return note_str[(note_local % 12)];
+}
+
+void setRndNotes(){
+  int noteincr = note;
+  rnd_notes[0] = noteincr;
+  for (int i=0;i<7;i++){
+          switch(scale){
+            case 1:
+                noteincr += maggiore[i];
+                break;
+            case 2:
+                noteincr += minore[i];
+                break;                
+            case 3:
+            	noteincr += dorico[i];
+            	break;
+            case 4:
+            	noteincr += frigio[i];
+            	break;
+            case 5:
+            	noteincr += lidio[i];
+            	break;
+            case 6:
+            	noteincr += misolidio[i];
+            	break;
+            case 7:
+            	noteincr += locrio[i];
+            	break;
+            case 8:
+            	noteincr += pentatonic[i];
+            	break;
+          }
+          rnd_notes[i+1] = noteincr;
+    }
+}
+
+
+String notesOfCurrentScale(){
+  String c_scale = "";
+  int noteincr = note;
+    
+    rnd_notes[0] = noteincr;
+    
+    c_scale = noteToString(noteincr) + "|"; //noteToString(noteincr) + "|";
+    for (int i=0;i<7;i++){
+          switch(scale){
+            case 1:
+                noteincr += maggiore[i];
+                break;
+            case 2:
+                noteincr += minore[i];
+                break;                
+            case 3:
+            	noteincr += dorico[i];
+            	break;
+            case 4:
+            	noteincr += frigio[i];
+            	break;
+            case 5:
+            	noteincr += lidio[i];
+            	break;
+            case 6:
+            	noteincr += misolidio[i];
+            	break;
+            case 7:
+            	noteincr += locrio[i];
+            	break;
+            case 8:
+            	noteincr += pentatonic[i];
+            	break;
+          }
+          c_scale +=  noteToString(noteincr)+ "|";
+          rnd_notes[i+1] = noteincr;
+    }
+  return c_scale;
+}
 /*
 void noteOn(int cmd, int pitch, int velocity) {
   Serial.write(cmd);
@@ -57,38 +140,6 @@ void noteOn(int cmd, int pitch, int velocity) {
   Serial.write(velocity);
 }
 */
-/*
-void scala(int initNote,int modo[], int range)
-{
-  int modoRange[]={};
-  /*
-    //octave 3
-    //initNote = C
-    //60
-    //modo maggiore [2,2,1,2,2,2,1]
-    //int modoRange[4];
-    //modoRange = modo;
-    //for (r=1;r<sizeOf(range);r++){
-    //  for (n=0;n<sizeOf(modo);n++){
-    //    modoRange[r*7+n] = modo[n];
-    //  }
- 
-
-  ret[0] = initNote;
-  int i;
-  for (i = 0; i < 8; i=i+1){
-     ret[i+1] = initNote+modoRange[i];
-  } 
-}
-*/
-
-//Restituisce una rray di battute Randomizza gli array nelle battute (8)
-/*void randomize(int rnd_min, int rnd_max){
-  for(int i=0;i<battute;i++){
-    int rnd = random(rnd_max-rnd_min);
-    rndArray[i] = rnd + rnd_min;
-  }
-}*/
 
 void setup() {
   lcd.begin(16, 2);
@@ -97,18 +148,16 @@ void setup() {
   pinMode(PIN_INC,INPUT_PULLUP);
   pinMode(PIN_DEC,INPUT_PULLUP);
   pinMode(PIN_MODE,INPUT_PULLUP);
-  pinMode(PIN_VAL,INPUT_PULLUP);  
+  pinMode(PIN_VAL,INPUT_PULLUP);
+  delay(1000);
+  lcd.clear();
+  lcd.print("VELOCITY");
+  lcd.setCursor(0,1);
+  lcd.print(velocity_rate);
+  delay(100);
   currentMenu=0;
-  //Serial.begin(31250);
 }
 
-///play the rnd arp
-/*void playSound(){
-  for (int i=0;i<8;i=i+1){
-    String space = " ";
-    Serial.println(tones[0] + space + velocity[i] + space + midi_ch);
-  }
-}*/
 
 void updateTempo(){
   bps = tempo/60;
@@ -124,12 +173,28 @@ void setMenuLabel(String label){
       lcd.print(label);
 //      lcd.setCursor(0,1);
     }
+ 
+/* MAIN RANDOM FUNCTION */    
+void randomize(){
+          setRndNotes();
+          for (int b=0;b<battute;b++){
+            int rndnote = random(11);
+            if (scale>1){
+              rndnote = rnd_notes[random(0,7)];
+            }
+            tones[b]=random(octave,octave+range)*12+rndnote;
+          }
+}    
 
 
 void inputReading(){
     menuReading = digitalRead(PIN_MODE);
     changeReading = digitalRead(PIN_VAL);
+    if (changeReading==0){
+      randomize();
+    }
     if (menuReading==0){
+      lcd.clear();
       if (currentMenu>=6){
         currentMenu=0;
       }else{
@@ -140,8 +205,8 @@ void inputReading(){
         case 0:    // VELOCITY
           menuLabel = "VELOCITY";
           break;
-        case 1:    // TONE
-          menuLabel = "TONE";
+        case 1:    // NOTE
+          menuLabel = "NOTE";
           break;
         case 2:    // SCALE
           menuLabel = "SCALE";
@@ -155,6 +220,10 @@ void inputReading(){
         case 5: //TEMPO
           menuLabel = "TEMPO";
           break;
+        case 6: //PLAY
+          menuLabel = "PLAY";
+          randomize();
+          break;
       }    
       setMenuLabel(menuLabel);
       delay(300);
@@ -162,37 +231,54 @@ void inputReading(){
   }
 }
 
-void seed(){
-  for(int i=0;i<battute;i++){
-    //60 = 5 * 12
-    int minNote = tonalita + (12*octave);
-    int maxNote = tonalita + (12*(octave+range));
-    tones[i] = random(minNote,maxNote);
-  }
+void incDecManage(int &param,int min_value,int max_value){
+      int btn_inc = digitalRead(PIN_INC);
+      int btn_dec = digitalRead(PIN_DEC);    
+      if (btn_inc==0){
+        if (param<max_value){
+          param += 1;
+        }else{
+          param=min_value;
+        }        
+      }
+      if (btn_dec==0){
+        if (param>min_value){
+          param -= 1;
+        }else{
+          param=max_value;
+        }
+      }
+      lcd.setCursor(0,1);
 }
-
 
 void loop() {
   inputReading();
   switch (currentMenu) {
     case 0:    // VELOCITY
-      delay(300);
+      incDecManage(velocity_rate,0,100);
+      lcd.print(velocity_rate);
+      lcd.print("   ");
+      delay(100);
       break;
-    case 1:    // TONE
+    case 1:    // NOTE
+      incDecManage(note,0,11);
+      lcd.print(note_str[note]+ " ");
       delay(300);    
       break;
     case 2:    // SCALE
+      incDecManage(scale,0,8);
+      lcd.print(scale_str[scale] + "   ");
+      Serial.println(notesOfCurrentScale());
       delay(300);    
       break;  
     case 3: //RANGE
-      lcd.setCursor(0,1);
-      lcd.print(String(range));
-    
+      incDecManage(range,0,4);
+      lcd.print(range);
       delay(300);
       break;
     case 4: //OCTAVE
-      lcd.setCursor(0,1);
-      lcd.print(String(octave));
+      incDecManage(octave,0,8);
+      lcd.print(octave);
       delay(300);
       break;
     case 5: //TEMPO
@@ -212,13 +298,14 @@ void loop() {
       delay(100);
       break;
     case 6:    // PLAY
+      String out = "";
       for (int b=0;b<battute;b++){
-        //inputReading();
         //noteOn(0x90, tones[b], velocity[b]);
-        Serial.print(String(tones[b],HEX)+"|" );
+        out+= String(tones[b])+"|";
         delay(arp_tick);
         //noteOn(0x90,tones[b], 0x00);
       }
+      Serial.println(out);
       break;    
   }
   
